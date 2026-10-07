@@ -153,6 +153,34 @@ var player={x:.18,y:0,vy:0,w:.066,h:.185,onGround:true,jumpHold:0};
 var GROUND=.82;
 var NORMAL_JUMP=-.72, GRAVITY=1.48, HOLD_FORCE=-1.00, MAX_HOLD=.29;
 
+function mobilePlay(){return window.matchMedia("(max-width:760px)").matches;}
+function playProfile(){
+  if(mobilePlay()){
+    return{
+      normalJump:-.72,
+      gravity:1.48,
+      holdForce:-1.00,
+      maxHold:.29,
+      speed:.22,
+      spawnGap:1700,
+      minSpawnGap:1350,
+      closeFollowChance:0,
+      closeFollowFactor:0
+    };
+  }
+  return{
+    normalJump:NORMAL_JUMP,
+    gravity:GRAVITY,
+    holdForce:HOLD_FORCE,
+    maxHold:MAX_HOLD,
+    speed:.19,
+    spawnGap:2100,
+    minSpawnGap:1550,
+    closeFollowChance:.16,
+    closeFollowFactor:.27
+  };
+}
+
 var VOCAB_LIBRARY={
 "de-DE":{
 "Basics":[["hallo","hello"],["ja","yes"],["nein","no"],["bitte","please"],["danke","thank you"],["gut","good"],["schlecht","bad"],["groß","big"],["klein","small"],["neu","new"],["alt","old"],["heute","today"]],
@@ -275,7 +303,7 @@ function chooseNextTarget(){
   if(targetQueue.length===0){
     round++;
     speed=Math.min(.31,speed*1.085);
-    spawnGap=Math.max(1550,spawnGap*.93);
+    spawnGap=Math.max(playProfile().minSpawnGap,spawnGap*.93);
     buildTargetQueue();
     flash("ROUND "+round+" · A LITTLE FASTER",true);
   }
@@ -296,7 +324,7 @@ function startGame(){
   E("error").textContent="";
   targetLang=E("language").value;
   vocab=raw.map(function(p,i){return{id:i,target:p[0],prompt:p[1]};});
-  score=0;lives=3;round=1;misses={};speed=.19;spawnGap=2100;objects=[];wrongSinceCorrect=0;
+  score=0;lives=3;round=1;misses={};speed=playProfile().speed;spawnGap=playProfile().spawnGap;objects=[];wrongSinceCorrect=0;
   player.y=GROUND-player.h;player.vy=0;player.onGround=true;player.jumpHold=0;
   jumpHeld=false;crouchHeld=false;invulnerable=0;worldScroll=0;running=true;paused=false;lastSpawn=0;lastTime=0;
   buildTargetQueue();chooseNextTarget();
@@ -319,7 +347,7 @@ function beginJump(){
   if(!running||paused||!player.onGround)return;
   crouchHeld=false;
   player.onGround=false;
-  player.vy=NORMAL_JUMP;
+  player.vy=playProfile().normalJump;
   player.jumpHold=0;
   beep(310,.045,430);
 }
@@ -375,9 +403,10 @@ function spawnIfNeeded(now){
   makeWord();
   enforceThreeWrongMaximum();
   lastSpawn=now;
-  if(Math.random()<.16){
-    /* Schedule closer follow-up by shortening only this interval. */
-    lastSpawn=now-(spawnGap*.27);
+  var profile=playProfile();
+  if(Math.random()<profile.closeFollowChance){
+    /* Mobile gets more landing room. Desktop keeps the original follow-up timing. */
+    lastSpawn=now-(spawnGap*profile.closeFollowFactor);
   }
 }
 
@@ -426,11 +455,12 @@ function update(dt,now){
   if(invulnerable>0)invulnerable-=dt;
 
   if(!player.onGround){
-    if(jumpHeld && player.jumpHold<MAX_HOLD && player.vy<0){
-      player.vy+=HOLD_FORCE*dt;
+    var profile=playProfile();
+    if(jumpHeld && player.jumpHold<profile.maxHold && player.vy<0){
+      player.vy+=profile.holdForce*dt;
       player.jumpHold+=dt;
     }
-    player.vy+=GRAVITY*dt;
+    player.vy+=profile.gravity*dt;
     player.y+=player.vy*dt;
     if(player.y>=GROUND-player.h){
       player.y=GROUND-player.h;player.vy=0;player.onGround=true;player.jumpHold=0;

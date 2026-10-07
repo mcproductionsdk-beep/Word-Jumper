@@ -29,7 +29,21 @@ canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
 .overlay{display:none;position:absolute;inset:0;background:#102744e8;z-index:5;align-items:center;justify-content:center;text-align:center}.overlay.show{display:flex}
 .big{font:900 clamp(28px,5vw,48px) "Courier New";color:#ef6c88;text-shadow:4px 4px 0 #000}.msg{font:900 clamp(17px,2.4vw,27px) "Courier New";margin:10px;color:#fff}
 .toast{display:none;position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:4;font:900 25px "Courier New";text-shadow:3px 3px 0 #102744}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.hud{grid-template-columns:1fr 1fr}.target{grid-column:1/-1;grid-row:1}.wrap{height:58vh;max-height:none}}
+.mobile-controls{display:none}
+@media(max-width:760px){
+.grid{grid-template-columns:1fr}
+#game.active{display:flex;flex-direction:column}
+#game .buttons{order:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin:2px 0 5px}
+#game .buttons button{margin:0;padding:8px 2px;font-size:10px;min-width:0}
+#game .hud{order:2;grid-template-columns:1fr 1fr;margin:4px 0}
+#game .target{grid-column:1/-1;grid-row:1}
+#game .wrap{order:3;height:58vh;max-height:none}
+#game .mobile-controls{order:4;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 2px 3px}
+#game .mobile-controls button{margin:0;min-height:68px;font-size:17px;touch-action:none;user-select:none;-webkit-user-select:none}
+#game .mobile-controls .jump{background:#f3d64e}
+#game .mobile-controls .crouch{background:#5cc5d8}
+#game .tip{display:none}
+}
 </style>
 </head>
 <body>
@@ -112,6 +126,10 @@ lernen	to learn</textarea>
 <button id="restart" type="button">RESTART</button>
 <button id="mainMenu" type="button" class="pink">MAIN MENU</button>
 <button id="sound" type="button">🔊 SOUND ON</button>
+</div>
+<div id="mobileControls" class="mobile-controls" aria-label="Touch controls">
+<button id="touchJump" class="jump" type="button">▲<br>JUMP</button>
+<button id="touchCrouch" class="crouch" type="button">▼<br>CROUCH</button>
 </div>
 <div class="tip">JUMP: Space / ↑ / W · HOLD = HIGHER · CROUCH: ↓ / S · PAUSE: P</div>
 </section>
@@ -282,15 +300,16 @@ function startGame(){
   player.y=GROUND-player.h;player.vy=0;player.onGround=true;player.jumpHold=0;
   jumpHeld=false;crouchHeld=false;invulnerable=0;worldScroll=0;running=true;paused=false;lastSpawn=0;lastTime=0;
   buildTargetQueue();chooseNextTarget();
-  E("gameOver").classList.remove("show");E("pauseOverlay").classList.remove("show");E("pause").textContent="PAUSE";
+  E("gameOver").classList.remove("show");E("pauseOverlay").classList.remove("show");E("pause").textContent="PAUSE";E("toast").style.display="none";
   menu.classList.remove("active");game.classList.add("active");resize();
   cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);
 }
 function restart(){startGame();}
-function showMenu(){running=false;paused=false;cancelAnimationFrame(raf);game.classList.remove("active");menu.classList.add("active");}
+function showMenu(){running=false;paused=false;jumpHeld=false;crouchHeld=false;cancelAnimationFrame(raf);E("pauseOverlay").classList.remove("show");E("gameOver").classList.remove("show");E("pause").textContent="PAUSE";E("toast").style.display="none";game.classList.remove("active");menu.classList.add("active");}
 function togglePause(){
   if(!running)return;
   paused=!paused;
+  if(paused){jumpHeld=false;crouchHeld=false;}
   E("pauseOverlay").classList.toggle("show",paused);
   E("pause").textContent=paused?"RESUME":"PAUSE";
   if(!paused){lastTime=0;raf=requestAnimationFrame(loop);}
@@ -680,7 +699,7 @@ window.addEventListener("keydown",function(e){
   }else if(k==="arrowdown"||k==="s"){
     e.preventDefault();crouchHeld=true;
   }else if(k==="p"){
-    e.preventDefault();togglePause();
+    e.preventDefault();if(!e.repeat)togglePause();
   }
 });
 window.addEventListener("keyup",function(e){
@@ -688,6 +707,21 @@ window.addEventListener("keyup",function(e){
   if(e.code==="Space"||k==="arrowup"||k==="w") releaseJump();
   if(k==="arrowdown"||k==="s") crouchHeld=false;
 });
+
+function bindTouchHold(id,onPress,onRelease){
+  var b=E(id);
+  function down(e){e.preventDefault();onPress();if(b.setPointerCapture)try{b.setPointerCapture(e.pointerId);}catch(x){}}
+  function up(e){if(e)e.preventDefault();onRelease();}
+  b.addEventListener("pointerdown",down,{passive:false});
+  b.addEventListener("pointerup",up,{passive:false});
+  b.addEventListener("pointercancel",up,{passive:false});
+  b.addEventListener("lostpointercapture",up,{passive:false});
+}
+bindTouchHold("touchJump",function(){if(!jumpHeld){jumpHeld=true;beginJump();}},releaseJump);
+bindTouchHold("touchCrouch",function(){if(running&&!paused)crouchHeld=true;},function(){crouchHeld=false;});
+function clearHeldControls(){jumpHeld=false;crouchHeld=false;}
+window.addEventListener("blur",clearHeldControls);
+document.addEventListener("visibilitychange",function(){if(document.hidden)clearHeldControls();});
 
 populateCategories(false);
 updatePreview();

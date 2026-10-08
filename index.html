@@ -835,7 +835,7 @@ async function createStudentLink(){
     var setId=data && (data.id || data.setId || (data.set && data.set.id));
     if(!setId)throw new Error("The API saved the set but did not return an ID.");
 
-    var u=new URL("https://raw.githack.com/mcproductionsdk-beep/Word-Jumper/d1-vocab-test/index.html");
+    var u=new URL(location.href);
     u.search="";
     u.hash="set="+encodeURIComponent(setId);
     lastStudentLink=u.toString();

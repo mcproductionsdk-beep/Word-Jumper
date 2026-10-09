@@ -817,13 +817,13 @@ async function createStudentLink(){
     u.hash="set="+encodeURIComponent(setId);
     lastStudentLink=u.toString();
 
-    E("copyStudentLink").style.display="block";
+    E("shareStatus").textContent="✓ LINK READY: "+lastStudentLink;
     E("shareStatus").textContent="✓ STUDENT LINK READY — permanent set "+setId+" · "+pairs.length+" words.";
   }catch(err){
     console.error("Could not create vocabulary set:",err);
     lastStudentLink="";
-    E("copyStudentLink").style.display="none";
-    E("shareStatus").textContent="Could not save this set. Please try again.";
+
+    E("shareStatus").textContent="Could not save this set: "+(err&&err.message?err.message:"Please try again.");
   }finally{
     sharingBusy=false;
     button.disabled=false;
@@ -838,7 +838,7 @@ async function copyStudentLink(){
     var x=document.createElement("textarea");x.value=lastStudentLink;document.body.appendChild(x);
     x.select();document.execCommand("copy");x.remove();
   }
-  E("shareStatus").textContent="✓ LINK COPIED — ready to send to students.";
+  E("shareStatus").textContent="✓ LINK COPIED — "+lastStudentLink;
 }
 
 function normalizeLoadedPairs(data){
@@ -905,7 +905,7 @@ async function loadStudentSet(){
 }
 
 
-E("shareStudentLink").onclick=async function(){lastStudentLink="";await createStudentLink();if(lastStudentLink)await copyStudentLink()};
+E("shareStudentLink").onclick=async function(){lastStudentLink="";await createStudentLink();if(lastStudentLink){try{await copyStudentLink()}catch(e){E("shareStatus").textContent="✓ LINK READY: "+lastStudentLink}}};
 E("studentPlay").onclick=function(){if(!this.disabled)E("play").click()};
 window.addEventListener("hashchange",loadStudentSet);
 populateCategories(false);

@@ -5,7 +5,7 @@
 <style>body{margin:0;background:#10192e;color:#f8f8ff;font-family:"Courier New",monospace}#jumperFrame{display:none;width:100%;height:calc(100dvh - 12px);min-height:600px;border:0;background:#16264e}#jumperFrame.playing{display:block}#app{max-width:1100px;margin:8px auto}#app[hidden]{display:none!important}body:has(#jumperFrame.playing) #app{display:none!important}</style></head>
 <body><main id="app"></main><iframe id="jumperFrame" title="Word Jumper gameplay" src="./jumper-game.html?release=jumper-core-preview-1"></iframe>
 <script type="module">
-import {mountTeacherMenu,mountStudentMenu} from './core/menu.js?release=student-unified-20261020';
+import {mountTeacherMenu,mountStudentMenu} from './core/menu.js?release=universal-named-sharing-20261021';
 import {createSharingClient,readStudentSetId} from './core/sharing.js';
 import {createVoiceService} from './core/voice.js';
 import {WAREHOUSE_CATEGORIES} from './core/warehouse-categories.js';

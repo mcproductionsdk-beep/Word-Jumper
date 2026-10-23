@@ -184,7 +184,7 @@ function notifyCore(type,extra){
 }
 function startGame(pairs,language){
  var raw=validPairs(pairs);
- if(!raw||!["de-DE","es-ES","da-DK","en-US"].includes(language)){
+ if(!raw||!["de-DE","es-ES","da-DK","en-US","fr-FR","it-IT"].includes(language)){
   notifyCore("BT_JUMPER_START_FAILED");return false;
  }
  lastPairs=raw.map(function(p){return p.slice();});

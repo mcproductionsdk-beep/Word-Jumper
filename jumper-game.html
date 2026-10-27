@@ -189,7 +189,7 @@ function startGame(pairs,language){
  }
  lastPairs=raw.map(function(p){return p.slice();});
  targetLang=language;
- vocab=raw.map(function(p,i){return{id:i,target:p[0],prompt:p[1]};});
+ vocab=raw.map(function(p,i){return{id:i,target:p[1],prompt:p[0]};});
  score=0;lives=3;round=1;misses={};speed=playProfile().speed;spawnGap=playProfile().spawnGap;objects=[];wrongSinceCorrect=0;
  player.y=GROUND-player.h;player.vy=0;player.onGround=true;player.jumpHold=0;
  jumpHeld=false;crouchHeld=false;invulnerable=0;worldScroll=0;running=true;paused=false;lastSpawn=0;lastTime=0;

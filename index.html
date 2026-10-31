@@ -86,7 +86,7 @@ window.addEventListener("message",e=>{
  if(e.data?.type==="BT_JUMPER_READY"){jumperReady=true;deliverJumper();}
  if(e.data?.type==="BT_JUMPER_SPEAK"&&typeof e.data.text==="string"&&e.data.text.length<=250&&["es-ES","de-DE","da-DK","en-US","fr-FR","it-IT"].includes(e.data.language)){void voice.speak(e.data.text,e.data.language);}
  if(e.data?.type==="BT_JUMPER_CANCEL_SPEECH")voice.cancel();
- if(e.data?.type==="BT_JUMPER_MENU"){if(new URLSearchParams(location.search).get("returnTo")==="dashboard"){location.assign("https://boringteacher.com/dev/word-games/");}else{history.replaceState(null,"",location.pathname+location.search);showMenu(true);}}
+ if(e.data?.type==="BT_JUMPER_MENU"){if(new URLSearchParams(location.search).get("returnTo")==="dashboard"){const url=new URL("https://boringteacher.com/dev/word-games/");url.hash=location.hash;location.assign(url.toString());}else{history.replaceState(null,"",location.pathname+location.search);showMenu(true);}}
  if(e.data?.type==="BT_JUMPER_START_FAILED"){document.documentElement.classList.remove("bt-autoplay-pending");frame.classList.remove("playing");root.hidden=false;root.style.removeProperty('display');root.textContent="Word Jumper could not start. Please refresh and try again.";}
 });
 frame.addEventListener("load",()=>{jumperReady=false;frame.contentWindow?.postMessage({type:"BT_JUMPER_PING"},location.origin);});

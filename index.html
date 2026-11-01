@@ -2,7 +2,6 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Word Jumper — Boring Teacher</title>
 <script>if(new URLSearchParams(location.search).get("autoplay")==="1"&&location.hash.startsWith("#set="))document.documentElement.classList.add("bt-autoplay-pending");</script>
-<link rel="stylesheet" href="./styles/menu.css?release=student-arcade-autoplay-20261023v2">
 <style>
 body{margin:0;background:#10192e;color:#f8f8ff;font-family:"Courier New",monospace}
 #jumperFrame{display:none;width:100%;height:calc(100dvh - 12px);min-height:600px;border:0;background:#16264e}
@@ -12,57 +11,19 @@ body{margin:0;background:#10192e;color:#f8f8ff;font-family:"Courier New",monospa
 </style></head>
 <body><main id="app"></main><iframe id="jumperFrame" title="Word Jumper gameplay" src="./jumper-game.html?release=jumper-core-preview-1"></iframe>
 <script type="module">
-import { mountTeacherMenu,mountStudentMenu } from "./core/menu.js?release=jumper-dashboard-20261027";
-import { createSharingClient,readStudentSetId } from "./core/sharing.js?release=jumper-multilingual-v2-20261023";
+import { createSharingClient, readStudentSetId } from "./core/sharing.js?release=jumper-multilingual-v2-20261023";
 import { createVoiceService } from "./core/voice.js";
-import { WAREHOUSE_CATEGORIES } from "./core/warehouse-categories.js";
-import { LANGUAGE_OPTIONS,categoriesForPair } from "./core/multilingual-vocabulary-v2.js";
 const root=document.getElementById("app"),frame=document.getElementById("jumperFrame");
 const sharing=createSharingClient({apiBaseUrl:"https://boringteacher-vocabulary-api.mcproductionsdk.workers.dev"});
-const voice=createVoiceService();let menu=null;
-const instructions="JUMP: SPACE / UP / W (hold for higher jump). CROUCH: DOWN / S. PAUSE: P. Collect the correct translation and avoid wrong words. Wrong high words: crouch underneath; correct high words: jump into them.";
-const options={title:"WORD JUMPER",instructions,categories:WAREHOUSE_CATEGORIES,defaultCategory:"Animals",defaultText:"",defaultPromptLanguage:"en-US",defaultLanguage:"es-ES",previewGameUrl:location.href,onPlay:start};
-const V1_LIBRARY_URL="https://boringteacher.com/libraries/vocabulary/v1.json";
-const V2_LIBRARY_URL="https://boringteacher.com/libraries/vocabulary/v2.json";
-async function loadBuiltInVocabulary(){
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),3500);
- try{
-  const response=await fetch(V1_LIBRARY_URL,{signal:controller.signal,cache:"no-store"});
-  if(!response.ok)throw Error("V1 HTTP "+response.status);
-  const library=await response.json();
-  if(library?.schemaVersion!==1||library?.pairOrder?.join(",")!=="target,en"||!library.languages)throw Error("Invalid V1 library");
-  for(const [locale,categories] of Object.entries(WAREHOUSE_CATEGORIES)){
-   const incoming=library.languages[locale];
-   if(!incoming)throw Error("Missing locale "+locale);
-   for(const key of Object.keys(categories)){
-    const pairs=incoming[key];
-    if(!Array.isArray(pairs)||pairs.length<5||!pairs.every(p=>Array.isArray(p)&&p.length===2&&p.every(x=>typeof x==="string"&&x.trim())))throw Error("Invalid V1 category "+locale+"/"+key);
-   }
-  }
-  options.categories=library.languages;
- }catch(e){console.warn("Word Jumper V1 unavailable; using built-in categories.",e)}
- finally{clearTimeout(timeout)}
-}
-async function loadMultilingualVocabulary(){
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4500);
- try{
-  const response=await fetch(V2_LIBRARY_URL,{signal:controller.signal,cache:"no-store"});
-  if(!response.ok)throw Error("V2 HTTP "+response.status);
-  const library=await response.json();
-  if(library.schemaVersion!==2||library.concepts?.length!==96)throw Error("Invalid V2 library");
-  for(const target of LANGUAGE_OPTIONS)for(const prompt of LANGUAGE_OPTIONS){
-   if(target.locale===prompt.locale)continue;
-   const cats=categoriesForPair(library,prompt.locale,target.locale);
-   if(Object.keys(cats).length!==8||Object.values(cats).some(pairs=>pairs.length!==12))throw Error("Incomplete V2 "+prompt.locale+" → "+target.locale);
-  }
-  options.multilingualLibrary=true;
-  options.languageOptions=LANGUAGE_OPTIONS;
-  options.getCategoriesForPair=(prompt,target)=>categoriesForPair(library,prompt,target);
-  console.info("Word Jumper multilingual V2 loaded.");
- }catch(e){console.warn("Word Jumper V2 unavailable; falling back to V1.",e)}
- finally{clearTimeout(timeout)}
-}
+const voice=createVoiceService();
+const dashboard="https://boringteacher.com/dev/word-games/";
+const setId=readStudentSetId(location.href);
 let jumperReady=false,pendingVocabulary=null;
+function returnToDashboard(){
+ const url=new URL(dashboard);
+ if(setId)url.hash="set="+encodeURIComponent(setId);
+ location.assign(url.toString());
+}
 function deliverJumper(){
  if(!jumperReady||!pendingVocabulary)return;
  frame.contentWindow.postMessage({type:"BT_JUMPER_START",pairs:pendingVocabulary.pairs,language:pendingVocabulary.language},location.origin);
@@ -71,25 +32,33 @@ function deliverJumper(){
 function start(vocabulary){
  document.documentElement.classList.remove("bt-autoplay-pending");
  pendingVocabulary=vocabulary;
- menu?.destroy();menu=null;root.hidden=true;root.style.setProperty('display','none','important');frame.classList.add("playing");
+ root.hidden=true;frame.classList.add("playing");
  deliverJumper();
  frame.contentWindow?.postMessage({type:"BT_JUMPER_PING"},location.origin);
  frame.focus();
 }
-function showMenu(forceTeacher=false){
- frame.classList.remove("playing");root.hidden=false;root.style.removeProperty('display');
- menu?.destroy();menu=null;voice.cancel();
- menu=!forceTeacher&&readStudentSetId(location.href)?mountStudentMenu(root,{sharing,voice},{...options,studentUrl:location.href,onRecover:()=>{history.replaceState(null,"",location.pathname+location.search);showMenu(true);}}):mountTeacherMenu(root,{sharing,voice},options);
+function showError(message){
+ document.documentElement.classList.remove("bt-autoplay-pending");
+ frame.classList.remove("playing");root.hidden=false;
+ root.replaceChildren();
+ const heading=document.createElement("h2"),detail=document.createElement("p"),back=document.createElement("a");
+ heading.textContent="WORD JUMPER · UNABLE TO START";detail.textContent=message;
+ back.textContent="RETURN TO WORD GAMES";back.href=dashboard+(setId?"#set="+encodeURIComponent(setId):"");
+ root.append(heading,detail,back);
 }
 window.addEventListener("message",e=>{
  if(e.origin!==location.origin||e.source!==frame.contentWindow)return;
  if(e.data?.type==="BT_JUMPER_READY"){jumperReady=true;deliverJumper();}
  if(e.data?.type==="BT_JUMPER_SPEAK"&&typeof e.data.text==="string"&&e.data.text.length<=250&&["es-ES","de-DE","da-DK","en-US","fr-FR","it-IT"].includes(e.data.language)){void voice.speak(e.data.text,e.data.language);}
  if(e.data?.type==="BT_JUMPER_CANCEL_SPEECH")voice.cancel();
- if(e.data?.type==="BT_JUMPER_MENU"){if(new URLSearchParams(location.search).get("returnTo")==="dashboard"){location.assign("https://boringteacher.com/dev/word-games/");}else{history.replaceState(null,"",location.pathname+location.search);showMenu(true);}}
- if(e.data?.type==="BT_JUMPER_START_FAILED"){document.documentElement.classList.remove("bt-autoplay-pending");frame.classList.remove("playing");root.hidden=false;root.style.removeProperty('display');root.textContent="Word Jumper could not start. Please refresh and try again.";}
+ if(e.data?.type==="BT_JUMPER_MENU"){voice.cancel();returnToDashboard();}
+ if(e.data?.type==="BT_JUMPER_START_FAILED")showError("The vocabulary set could not start. Return to Word Games and try again.");
 });
 frame.addEventListener("load",()=>{jumperReady=false;frame.contentWindow?.postMessage({type:"BT_JUMPER_PING"},location.origin);});
-void loadBuiltInVocabulary().then(loadMultilingualVocabulary).finally(()=>showMenu());
-frame.contentWindow?.postMessage({type:"BT_JUMPER_PING"},location.origin);
+if(!setId){returnToDashboard();}
+else{
+ root.textContent="LOADING VOCABULARY…";
+ sharing.loadSet(setId).then(start).catch(e=>showError(e.message??"Could not load shared vocabulary."));
+ frame.contentWindow?.postMessage({type:"BT_JUMPER_PING"},location.origin);
+}
 </script></body></html>
